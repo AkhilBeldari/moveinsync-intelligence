@@ -1,0 +1,378 @@
+<div class="page-shell">
+  <header class="topbar">
+    <div class="brand-block">
+      <div class="brand">MoveInSync</div>
+      <div class="subtitle">Vendor Operations & Agentic Intelligence Module</div>
+    </div>
+
+
+    <nav class="nav-tabs">
+      <button 
+        type="button" 
+        [class.active]="activeTab === 'vendors'" 
+        (click)="activeTab = 'vendors'">
+        Vendor Scorecards
+      </button>
+      <button 
+        type="button" 
+        [class.active]="activeTab === 'disputes'" 
+        (click)="activeTab = 'disputes'">
+        AI Claim Assistant
+      </button>
+    </nav>
+
+    <div class="route-badge">
+      Route: <code>/vendor-operations</code>
+    </div>
+  </header>
+
+  <main class="dashboard">
+    <!-- FILTER CONTROL BAR -->
+    <section class="filter-bar">
+      <div class="filter-group">
+        <label for="monthSelect">📅 Filter Period / Month:</label>
+        <select id="monthSelect" [(ngModel)]="selectedMonth" (change)="onFilterChange()" class="filter-select">
+          <option *ngFor="let m of availableMonths" [value]="m">{{ m }}</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="buSelect">🏢 Business Unit / Client:</label>
+        <select id="buSelect" [(ngModel)]="selectedBusinessUnit" (change)="onFilterChange()" class="filter-select">
+          <option *ngFor="let bu of availableBusinessUnits" [value]="bu">{{ bu }}</option>
+        </select>
+      </div>
+
+      <div class="active-filter-badge">
+        Showing data for: <strong>{{ selectedMonth }}</strong> ({{ selectedBusinessUnit }})
+      </div>
+    </section>
+
+    <!-- BACKEND DISCONNECTED ERROR ALERT -->
+    <div *ngIf="backendError" class="backend-error-banner">
+      <div class="error-icon">⚠️</div>
+      <div class="error-text">
+        <strong>Backend Connection Failed</strong>
+        <p>{{ backendError }}</p>
+      </div>
+      <button type="button" class="retry-btn" (click)="loadVendorScorecards()">Retry Connection</button>
+    </div>
+
+    <!-- VENDOR INTELLIGENCE TAB -->
+    <ng-container *ngIf="activeTab === 'vendors' && !backendError">
+      <section class="hero-card">
+        <div>
+          <p class="eyebrow">ENTERPRISE MOBILITY VENDOR MANAGEMENT</p>
+          <h1>Vendor Performance & Audit Command Center</h1>
+          <p class="hero-description">
+            Monitor vendor SLA benchmarks, delay attribution (Vendor vs Employee fault), 
+            pre-audit invoices, and enforce cab/driver safety compliance across {{ selectedMonth }}.
+          </p>
+        </div>
+        <div class="hero-badge">
+          <span>AI</span>
+          Vendor Agent Active
+        </div>
+      </section>
+
+      <!-- VENDOR SELECTOR ROW -->
+      <section class="vendor-selector-grid">
+        <div 
+          *ngFor="let vendor of vendors" 
+          class="vendor-card"
+          [class.selected]="selectedVendor?.vendorName === vendor.vendorName"
+          (click)="selectVendor(vendor)">
+          <div class="vendor-card-header">
+            <h3>{{ vendor.vendorName }}</h3>
+            <span class="badge" [class.success]="vendor.onTimeArrivalPercentage >= vendor.slaTargetPercentage" [class.danger]="vendor.onTimeArrivalPercentage < vendor.slaTargetPercentage">
+              OTA: {{ vendor.onTimeArrivalPercentage }}%
+            </span>
+          </div>
+          <div class="vendor-mini-stats">
+            <div>
+              <span>Compliance</span>
+              <strong>{{ vendor.complianceRatePercentage }}%</strong>
+            </div>
+            <div>
+              <span>Bill Accuracy</span>
+              <strong>{{ vendor.billingAccuracyPercentage }}%</strong>
+            </div>
+            <div>
+              <span>Rating</span>
+              <strong>★ {{ vendor.averageDriverRating }}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PROBLEM 1 SOLUTION: AI DELAY ATTRIBUTION & SLA SHIELD CARD -->
+      <section *ngIf="selectedVendor" class="panel full-width sla-shield-panel">
+        <div class="panel-header">
+          <h2>🛡️ AI Delay Attribution & SLA Shield Engine (Problem 1 Solution)</h2>
+          <span class="shield-badge">Powered by Sarvam AI (`sarvam-105b`)</span>
+        </div>
+
+        <!-- LOADING STATE WHILE AUDITING -->
+        <div *ngIf="runningShieldAudit" class="loading-box">
+          <div class="spinner"></div>
+          <p>Running Sarvam AI Delay Attribution & SLA Protection Audit for <strong>{{ selectedVendor.vendorName }}</strong> ({{ selectedMonth }})...</p>
+          <small>Cross-referencing <code>ride_data_trip</code> telemetry & <code>emp_data.csv</code> boarding logs with Sarvam AI...</small>
+        </div>
+
+        <!-- SHIELD ERROR -->
+        <div *ngIf="shieldError && !runningShieldAudit" class="backend-error-banner">
+          <div class="error-icon">⚠️</div>
+          <div class="error-text">
+            <strong>SLA Shield Offline</strong>
+            <p>{{ shieldError }}</p>
+          </div>
+        </div>
+
+        <ng-container *ngIf="!runningShieldAudit && slaShieldResult">
+          <!-- RAW vs ADJUSTED OTA COMPARISON -->
+          <div class="shield-summary-grid">
+            <div class="shield-metric-box danger">
+              <span>Raw Unadjusted OTA</span>
+              <strong>{{ slaShieldResult.rawOtaPercentage }}%</strong>
+              <small>Fails target SLA (90.0%)</small>
+            </div>
+
+            <div class="shield-arrow">➔</div>
+
+            <div class="shield-metric-box success">
+              <span>AI-Shielded Adjusted SLA</span>
+              <strong>{{ slaShieldResult.adjustedSlaPercentage }}%</strong>
+              <small>Exempts Employee & Traffic delays</small>
+            </div>
+
+            <div class="shield-metric-box savings">
+              <span>Unfair Penalties Shielded</span>
+              <strong>${{ slaShieldResult.savedPenaltyAmount | number:'1.2-2' }}</strong>
+              <small>Protected vendor margin</small>
+            </div>
+          </div>
+
+          <!-- SARVAM AI REASONING -->
+          <div class="sarvam-reasoning-box">
+            <h4>🇮🇳 Sarvam AI Executive Attribution Analysis</h4>
+            <p>{{ slaShieldResult.sarvamAiAttributionAnalysis }}</p>
+          </div>
+
+          <!-- TRIP-LEVEL ATTRIBUTION TABLE -->
+          <div class="table-container">
+            <h4>Trip-Level Delay Attribution Log (ride_data_trip + emp_data.csv)</h4>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Trip ID</th>
+                  <th>Scheduled Pickup</th>
+                  <th>Driver Actual Pickup</th>
+                  <th>Employee Boarded</th>
+                  <th>Delay</th>
+                  <th>Delay Attribution</th>
+                  <th>Reasoning Evidence</th>
+                  <th>Penalty Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let trip of slaShieldResult.sampleAnalyzedTrips">
+                  <td><code>#{{ trip.tripId }}</code></td>
+                  <td>{{ trip.pickupTimeScheduled }}</td>
+                  <td>{{ trip.pickupTimeActual }}</td>
+                  <td>{{ trip.employeeBoardedTime }}</td>
+                  <td><strong class="danger-text">{{ trip.totalDelayMinutes }} mins</strong></td>
+                  <td>
+                    <span class="attr-pill" [class.emp]="trip.delayCategory === 'EMPLOYEE_FAULT'" [class.vendor]="trip.delayCategory === 'VENDOR_FAULT'" [class.traffic]="trip.delayCategory === 'TRAFFIC_FAULT'">
+                      {{ trip.delayCategory }}
+                    </span>
+                  </td>
+                  <td class="reason-cell">{{ trip.attributionReason }}</td>
+                  <td>
+                    <span class="shield-pill" [class.exempt]="trip.penaltyExempt" [class.penalized]="!trip.penaltyExempt">
+                      <span class="pill-icon">{{ trip.penaltyExempt ? '🛡️' : '⚠️' }}</span>
+                      <span>{{ trip.penaltyExempt ? 'EXEMPT' : 'PENALIZED' }}</span>
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </ng-container>
+      </section>
+
+      <!-- DETAILED VENDOR ANALYTICS -->
+      <section *ngIf="selectedVendor" class="content-grid">
+        <!-- SLA & DELAY ATTRIBUTION PANEL -->
+        <div class="panel">
+          <div class="panel-header">
+            <h2>SLA & Delay Attribution Breakdown ({{ selectedMonth }})</h2>
+            <span>Target SLA: {{ selectedVendor.slaTargetPercentage }}%</span>
+          </div>
+          <div class="metric-summary-row">
+            <div class="stat-box">
+              <span>Total Trips</span>
+              <strong>{{ selectedVendor.totalTrips | number }}</strong>
+            </div>
+            <div class="stat-box danger">
+              <span>Vendor-Fault Delays</span>
+              <strong>{{ selectedVendor.slaBreakdown[0]?.vendorFaultDelays | number }}</strong>
+              <small>Driver started late</small>
+            </div>
+            <div class="stat-box warning">
+              <span>Employee-Fault Delays</span>
+              <strong>{{ selectedVendor.slaBreakdown[0]?.employeeFaultDelays | number }}</strong>
+              <small>Boarded >10m late</small>
+            </div>
+            <div class="stat-box info">
+              <span>Traffic / Weather</span>
+              <strong>{{ selectedVendor.slaBreakdown[0]?.trafficWeatherDelays | number }}</strong>
+              <small>External events</small>
+            </div>
+          </div>
+
+          <div class="attribution-bar-container">
+            <h4>Delay Responsibility Split for {{ selectedVendor.vendorName }} ({{ selectedMonth }})</h4>
+            <div class="attribution-progress">
+              <div class="bar vendor-bar" style="width: 55%" title="Vendor Fault: 55%">Vendor Fault (55%)</div>
+              <div class="bar emp-bar" style="width: 25%" title="Employee Late: 25%">Employee Late (25%)</div>
+              <div class="bar traffic-bar" style="width: 20%" title="Traffic: 20%">Traffic (20%)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- COMPLIANCE & SAFETY RADAR -->
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Compliance & Safety Alerts</h2>
+            <span class="danger-text">{{ selectedVendor.nonCompliantTrips }} Alerts Flagged</span>
+          </div>
+
+          <div class="alert-list" *ngIf="selectedVendor.complianceAlerts.length > 0; else noAlerts">
+            <div *ngFor="let alert of selectedVendor.complianceAlerts" class="alert-item">
+              <div class="alert-severity" [class.sev1]="alert.severity === 'Sev-1'" [class.sev2]="alert.severity === 'Sev-2'">
+                {{ alert.severity }}
+              </div>
+              <div class="alert-details">
+                <strong>{{ alert.alertType }}</strong>
+                <p>Cab: <code>{{ alert.vehicleReg }}</code> | Driver: {{ alert.driverName }}</p>
+                <small>{{ alert.timestamp }}</small>
+              </div>
+            </div>
+          </div>
+          <ng-template #noAlerts>
+            <div class="empty-state success-text">
+              ✔ Zero safety or compliance violations recorded for this vendor in {{ selectedMonth }}.
+            </div>
+          </ng-template>
+        </div>
+      </section>
+
+      <!-- BILLING AUDIT DISCREPANCY TABLE -->
+      <section *ngIf="selectedVendor" class="panel full-width">
+        <div class="panel-header">
+          <h2>Pre-Audit Invoicing & Billing Discrepancies ({{ selectedMonth }})</h2>
+          <span>Flagged Items: {{ selectedVendor.billingDiscrepanciesCount }}</span>
+        </div>
+
+        <table class="data-table" *ngIf="selectedVendor.billingDiscrepancies.length > 0; else noBilling">
+          <thead>
+            <tr>
+              <th>Trip ID</th>
+              <th>Billed Km</th>
+              <th>GPS Tracked Km</th>
+              <th>Billed Cost</th>
+              <th>Audit Expected</th>
+              <th>Status</th>
+              <th>Discrepancy Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of selectedVendor.billingDiscrepancies">
+              <td><code>#{{ item.tripId }}</code></td>
+              <td>{{ item.billedKm }} km</td>
+              <td>{{ item.gpsActualKm }} km</td>
+              <td>\${{ item.billedCost | number:'1.2-2' }}</td>
+              <td>\${{ item.auditExpectedCost | number:'1.2-2' }}</td>
+              <td>
+                <span class="status-pill" [class.flagged]="item.status === 'FLAGGED'" [class.verified]="item.status === 'VERIFIED'">
+                  {{ item.status }}
+                </span>
+              </td>
+              <td class="reason-cell">{{ item.discrepancyReason }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <ng-template #noBilling>
+          <div class="empty-state success-text">
+            ✔ All invoice line items match GPS actual distance logs within SLA parameters for {{ selectedMonth }}.
+          </div>
+        </ng-template>
+      </section>
+    </ng-container>
+
+    <!-- AI CLAIM DISPUTE ASSISTANT TAB -->
+    <ng-container *ngIf="activeTab === 'disputes'">
+      <section class="hero-card">
+        <div>
+          <p class="eyebrow">AGENTIC DISPUTE RESOLUTION</p>
+          <h1>Multi-Source AI Dispute Claim Resolver</h1>
+          <p class="hero-description">
+            Ingest vendor email claims, parse delay assertions, and automatically cross-reference 
+            against trip logs, GPS traces, and peer vendor data for instant, evidence-backed decisions.
+          </p>
+        </div>
+      </section>
+
+      <section class="content-grid">
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Ingest Vendor Email / Claim</h2>
+            <span>Unstructured Input</span>
+          </div>
+
+          <div class="preset-buttons">
+            <button type="button" class="preset-btn" (click)="loadSampleClaim('weather')">🌧️ Rainstorm Claim</button>
+            <button type="button" class="preset-btn" (click)="loadSampleClaim('employee')">⏱️ Rider Late Claim</button>
+            <button type="button" class="preset-btn" (click)="loadSampleClaim('breakdown')">🛠️ Engine Breakdown</button>
+          </div>
+
+          <textarea class="claim-textarea" [(ngModel)]="emailClaimText" rows="6" placeholder="Type or paste any vendor email claim here..."></textarea>
+
+          <button type="button" class="action-btn" (click)="evaluateEmailClaim()" [disabled]="evaluatingClaim">
+            {{ evaluatingClaim ? 'Evaluating Evidence...' : 'Run AI Cross-Verification' }}
+          </button>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2>AI Evidence & Recommendation Report</h2>
+            <span>Automated Audit Result</span>
+          </div>
+
+          <div *ngIf="evaluatingClaim" class="loading-box">
+            <div class="spinner"></div>
+            <p>Analyzing GPS speed logs, weather records & peer vendor trips...</p>
+          </div>
+
+          <div *ngIf="claimEvaluationResult && !evaluatingClaim" class="eval-result-card">
+            <div class="recommendation-header" [class.approve]="claimEvaluationResult.claimValid" [class.reject]="!claimEvaluationResult.claimValid">
+              <span class="rec-tag" [class.approve-tag]="claimEvaluationResult.claimValid" [class.reject-tag]="!claimEvaluationResult.claimValid">
+                {{ claimEvaluationResult.recommendation }}
+              </span>
+              <span class="confidence">Confidence: {{ claimEvaluationResult.confidence }}%</span>
+            </div>
+
+            <p class="reasoning"><strong>Reasoning:</strong> {{ claimEvaluationResult.reasoning }}</p>
+
+            <h4>Corroborating Evidence Gathered:</h4>
+            <ul class="evidence-list">
+              <li *ngFor="let ev of claimEvaluationResult.evidence">
+                <span class="check-icon" [class.danger-icon]="!claimEvaluationResult.claimValid">✓</span> {{ ev }}
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </ng-container>
+  </main>
+</div>
